@@ -3,7 +3,8 @@ use std::{
     fs::File,
     io::{self, Error, ErrorKind, Write},
     net::{IpAddr, Ipv4Addr, Ipv6Addr},
-    str::FromStr, time::SystemTime,
+    str::FromStr,
+    time::SystemTime,
 };
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -28,7 +29,7 @@ const PROTOCOL_VERSION: i32 = 70015;
 struct NetAddress {
     //time: u32, // not present in version message
     services: u64,
-    ip: [char; 16],
+    ip: Ipv6Addr,
     port: u16,
 }
 
@@ -74,7 +75,7 @@ fn serialize_net_address(addr: &NetAddress) -> Vec<u8> {
     address.append(&mut addr.services.to_le_bytes().to_vec());
 
     let ip = addr.ip; //network byte order(big endian) in docs
-    for c in ip {
+    for c in ip.octets() {
         address.push(c as u8);
     }
 
@@ -144,7 +145,7 @@ async fn get_valid_ip() -> Result<(TcpStream, IpAddr), String> {
     //todo!("then test with your local full node");
     //todo!("Then choose an ip from randomly iterating over DNS_SEEDS");
 
-    let stream = TcpStream::connect("192.168.50.141:8332").await.unwrap();
+    let stream = TcpStream::connect("127.0.0.1:8332").await.unwrap();
     let localhost_v4 = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 
     Ok((stream, localhost_v4))
@@ -192,12 +193,20 @@ async fn main() -> io::Result<()> {
         IpAddr::V6(addr) => addr,
     };
 
+    let timestamp = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
     // Construct and send the version message
     let version_msg = VersionMessage {
         version: 1,
         services: 1,
-        timestamp: 8989,
-        addr_recv: NetAddress{ services: 1, ip: ['0','0', '0', '0','0','0', '0', '0','0','0', '0', '0','0','0', '0', '1'], port: 8332 },
+        timestamp: timestamp,
+        addr_recv: NetAddress {
+            services: 1,
+            ip: ip6,
+            port: 8332,
+        },
         nonce: 12343434,
         user_agent: 0x00,
         start_height: 0,
@@ -213,9 +222,9 @@ async fn main() -> io::Result<()> {
 
     stream.write_all(message.as_slice()).await?;
 
-    let mut  buffer = Vec::<u8>::new();
+    let mut buffer = Vec::<u8>::new();
     get_block_payload(&buffer);
-    
+
     get_data_with_timeout(&mut stream, &mut buffer).await;
 
     //connect but dont get any messages back.
