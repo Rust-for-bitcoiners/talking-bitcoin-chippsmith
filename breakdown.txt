@@ -1,0 +1,40 @@
+fabfb5da76657273696f6e00000000005600000038ee7f407f110100010000000000000015a6c36600000000010000000000000000000000000000000000ffff7f000001208c010000000000000000000000000000000000ffff7f000001208c0100000000000000000000000001
+
+fabfb5da  regtest network magic 4 bytes
+
+76657273696f6e0000000000  command version 12 bytes
+
+56000000 length 4 bytes 
+
+38ee7f40 checksum 4 bytes
+
+Version payload
+    7f110100 4 bytes vesion of version message
+
+    0100000000000000 8 bytes services ( little endian)
+
+    2c9ec36600000000 8 bytes timestamp (little endian)
+
+    addr_recv
+        0100000000000000 8 bytes services
+        
+        00000000000000000000ffff7f000001 16 bytes ip6
+
+        208c 2 bytes port
+
+    addr_from
+        0100000000000000 8 bytes services
+
+        00000000000000000000ffff7f000001 // 16 byts ip6 addr_from can be dummy data
+
+        208c 2 bytes port
+
+    0100000000000000 8 byte nonce (little endian)
+
+    00 1 byte varint for 0 byte user agent
+
+    00000000 4 byte start_height
+
+    01 1 byte relay
+
+
