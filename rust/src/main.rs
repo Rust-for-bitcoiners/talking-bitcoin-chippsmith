@@ -1,3 +1,7 @@
+#![allow(unused_imports)]
+#![allow(dead_code)]
+
+
 use dns_lookup::lookup_host;
 use std::{
     fs::File,
@@ -39,6 +43,7 @@ struct VersionMessage {
     services: u64,
     timestamp: i64,
     addr_recv: NetAddress,
+    addr_from: NetAddress,
     nonce: u64,
     user_agent: u8, //need to change to var_str
     start_height: i32,
@@ -56,8 +61,11 @@ fn serialize_version_msg(msg: &VersionMessage) -> Vec<u8> {
     version_message.append(&mut msg.services.to_le_bytes().to_vec()); // add services 8 bytes u64
     version_message.append(&mut msg.timestamp.to_le_bytes().to_vec()); // add timestamp 8 byes i64
     version_message.append(&mut serialize_net_address(&msg.addr_recv));
+    version_message.append(&mut serialize_net_address(&msg.addr_from));
     version_message.append(&mut msg.nonce.to_le_bytes().to_vec());
-    version_message.append(&mut msg.user_agent.to_le_bytes().to_vec());
+    version_message.append(&mut msg.user_agent.to_le_bytes().to_vec()); // user agent.  0x00 if string is 0 bytes long
+    version_message.append(&mut msg.start_height.to_le_bytes().to_vec());
+
 
     if msg.relay == false {
         version_message.push(0)
@@ -65,6 +73,8 @@ fn serialize_version_msg(msg: &VersionMessage) -> Vec<u8> {
         version_message.push(1)
     }
 
+     
+    
     version_message
 }
 
@@ -120,7 +130,7 @@ fn create_message(command: &str, payload: &[u8]) -> Vec<u8> {
 fn is_verack(data: &[u8]) -> bool {
     //todo!("Check whether these bytes starts with a verack message")
     let message_type = &data[0..12];
-    if message_type == String::from("version00000").as_bytes() {
+    if message_type == String::from("verack000000").as_bytes() {
         return true;
     } else {
         return false;
@@ -199,7 +209,7 @@ async fn main() -> io::Result<()> {
         .as_secs() as i64;
     // Construct and send the version message
     let version_msg = VersionMessage {
-        version: 1,
+        version: PROTOCOL_VERSION,
         services: 1,
         timestamp: timestamp,
         addr_recv: NetAddress {
@@ -207,10 +217,15 @@ async fn main() -> io::Result<()> {
             ip: ip6,
             port: 8332,
         },
-        nonce: 12343434,
+        addr_from: NetAddress {
+            services: 1,
+            ip: ip6, // dummy bytes, can be ignored
+            port: 8332,
+        },
+        nonce: 1,
         user_agent: 0x00,
         start_height: 0,
-        relay: false,
+        relay: true,
     };
 
     let binding = serialize_version_msg(&version_msg);
